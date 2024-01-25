@@ -1,0 +1,421 @@
+
+
+http://18.134.129.147:8080/
+
+telnet 54.210.128.167 22
+
+
+ssh -i "devopskey.pem" ec2-user@ec2-54-210-128-167.compute-1.amazonaws.com
+
+
+chmod 400 devopskey.pem
+ssh -i devopskey.pem ec2-user@54.210.128.167
+
+
+git remote set-url origin https://github.com/cloudesignr/DevOps_Project_1.git
+
+
+
+
+git push -u origin main
+
+git add Dockerfile execute.sh nginx_deployment.yaml
+
+git remote add origin git@github.com:cloudesignr/DevOps_Project_1.git/tree/main
+
+git commit -m "Uploaded Dockerfile, execute.sh and nginx_deployment.yaml"
+git push https://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@github.com:cloudesignr/DevOps_Project_1.git
+
+
+git config --global user.name "cloudesinr"
+
+git config --global user.email "mrahman11@hotmail.co.uk"
+
+1. Git & Github
+2. Linux
+3. Terraform
+4. Python & Bash Shell
+5. Docker and K8S
+6. On AWS master few services like Lambda, DynamoDB, CloudFormation, AWS Migration Hub 
+
+
+
+Ansible is a automation tool that is often listed in job descriptions for junior engineers. It’s used for automation, configuration management, application deployment, orchestration etc. 
+
+Hi All, 
+
+Hope you guys are having a great time during this holiday and are well. 
+
+I thought I'll share this project I completed recommended by Mo, tho i'm still waiting on my dns propagation and ssl/tls certificate from amazon (it's long for some reason). It was a manual build and a good hands on learning experience as Ansible is used to configure the servers and applications. 
+
+Next i want to rebuild the whole infrastructure with Terraform, as Terraform is typically used to set up the infrastructure. And then streamline and automate this process using CI/CD pipelines by setting up GitHub Actions and Ansible on the GitHub runner. https://medium.com/@e-miguel/deploy-a-static-website-on-aws-with-ansible-1dbc85187ccd 
+
+Let me know what you think and if you can help me with the CI/CD pipeline to automate the entire process. 
+
+
+
+
+
+
+wget http://google.com
+
+yum-plugin-fastestmirror.noarch  
+
+Git pull authentication 
+mrahman11@hotmail.co.uk
+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
+
+ansible all --key-file ~/.ssh/id_rsa -i inventory -m ping -u ec2-user
+
+
+
+
+Public bastion host -  chmod 400 AnsibleKey.pem
+ssh -i "AnsibleKey.pem" ec2-user@ec2-3-81-213-167.compute-1.amazonaws.com
+
+
+Private ansible server - [ec2-user@ip-10-0-0-51 ~]$ chmod 400 AnsibleKey.pem
+[ec2-user@ip-10-0-0-51 ~]$ ssh -i "AnsibleKey.pem" ec2-user@10.0.2.218
+
+
+
+Private web server az1 [ec2-user@ip-10-0-2-218 ~]$ ssh -i "AnsibleKey.pem" ec2-user@10.0.2.237
+
+Private web server az2
+ssh -i "AnsibleKey.pem" ec2-user@10.0.3.103 
+
+
+
+Disable 
+sudo yum-config-manager --disable amzn2-core
+sudo subscription-manager unsubscribe --server https://packages.amazonservices.com/AmazonLinux2/$basearch/os/$releasever/
+
+
+Enable 
+sudo yum-config-manager --enable amzn2-core
+sudo subscription-manager enable --server https://packages.amazonservices.com/AmazonLinux2/$basearch/os/$releasever/
+
+
+sudo yum-config-manager --disable amzn2-core/2/x86_64
+
+
+
+
+
+rds db Endpoint
+devrdsdb.ch62seg8y6we.eu-west-2.rds.amazonaws.com
+Port
+3306
+
+Bastion host security 
+Custom ICMP my ip 
+
+Setup server 
+18.133.233.53
+
+sudo aws s3 sync s3://my-website-objects /var/www/html
+
+
+DB_HOST=devrdsdb.ch62seg8y6we.eu-west-2.rds.amazonaws.com
+DB_DATABASE=Aplicationdb
+DB_USERNAME=mazid
+DB_PASSWORD=nadia123
+~                        
+
+[ec2-user@ip-10-0-0-79 html]$ sudo vi .env
+
+
+Cloud formation yaml temaplate 
+# VPC
+Resources:
+  MyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: "10.0.0.0/16"
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: "MyVPC"
+
+# PUBLIC SUBNETS
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: "eu-west-2a"
+      CidrBlock: "10.0.1.0/24"
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref MyVPC
+      Tags:
+        - Key: Name
+          Value: "PublicSubnet1"
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: "eu-west-2b"
+      CidrBlock: "10.0.2.0/24"
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref MyVPC
+      Tags:
+        - Key: Name
+          Value: "PublicSubnet2"
+
+# PRIVATE SUBNETS
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: "eu-west-2a"
+      CidrBlock: "10.0.3.0/24"
+      VpcId: !Ref MyVPC
+      Tags:
+        - Key: Name
+          Value: "PrivateSubnet1"
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: "eu-west-2b"
+      CidrBlock: "10.0.4.0/24"
+      VpcId: !Ref MyVPC
+      Tags:
+        - Key: Name
+          Value: "PrivateSubnet2"
+
+# INTERNET GATEWAY
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: "MyInternetGateway"
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref MyVPC
+      InternetGatewayId: !Ref InternetGateway
+
+# ROUTE TABLES
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVPC
+      Tags:
+        - Key: Name
+          Value: "PublicRouteTable"
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVPC
+      Tags:
+        - Key: Name
+          Value: "PrivateRouteTable"
+
+# SUB ASSOCIATIONS
+  PublicSubnet1Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateSubnet1Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnet2Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable
+
+# NAT GATEWAY
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt EIPNatGateway1.AllocationId
+      SubnetId: !Ref PublicSubnet1
+
+  NatGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt EIPNatGateway2.AllocationId
+      SubnetId: !Ref PublicSubnet2
+
+  EIPNatGateway1:
+    Type: AWS::EC2::EIP
+
+  EIPNatGateway2:
+    Type: AWS::EC2::EIP
+
+# ELASTIC ALB SG
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "ALBSecurityGroup"
+      Description: "Security Group for Application Load Balancer"
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: "0.0.0.0/0"
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: "0.0.0.0/0"
+      Tags:
+        - Key: Name
+          Value: "ALBSecurityGroup"
+          
+# ELASTIC ALB
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: "MyALB"
+      Subnets: [!Ref PublicSubnet1, !Ref PublicSubnet2]  # Public subnets for ALB
+      SecurityGroups: [!Ref ALBSecurityGroup]
+      Scheme: internet-facing
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: "60"
+      Tags:
+        - Key: Name
+          Value: "MyALB"
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            ContentType: "text/plain"
+            StatusCode: "200"
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
+
+# BASTION HOST
+  BastionHost:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-0aa825d61d0d52fa4
+      SubnetId: !Ref PublicSubnet1
+      SecurityGroupIds:
+        - !Ref BastionSecurityGroup
+      Tags:
+        - Key: Name
+          Value: "BastionHost"
+
+# BASTION HOST SG 
+  BastionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "BastionSecurityGroup"
+      Description: "Security Group for Bastion Host"
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: "YourIPAddress/32"  # Replace "YourIPAddress" with your actual IP address
+      Tags:
+        - Key: Name
+          Value: "BastionSecurityGroup"
+
+# ANSIBLE SERVER
+  AnsibleServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-0aa825d61d0d52fa4
+      SubnetId: !Ref PublicSubnet1
+      SecurityGroupIds:
+        - !Ref AnsibleSecurityGroup
+      Tags:
+        - Key: Name
+          Value: "AnsibleServer"
+
+# ANSIBLE SG
+  AnsibleSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "AnsibleSecurityGroup"
+      Description: "Security Group for Ansible Server"
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref BastionSecurityGroup
+      Tags:
+        - Key: Name
+          Value: "AnsibleSecurityGroup"
+
+# WEB-SERVER
+  WebServerLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: ami-0aa825d61d0d52fa4  # Specify the appropriate AMI ID
+      InstanceType: t2.micro
+      # KeyName: !Ref MyKeyPair
+      SecurityGroups:
+        - !Ref WebServerSecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          # Add any user data scripts or configurations here
+
+  WebServers:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchConfigurationName: !Ref WebServerLaunchConfig
+      MinSize: 2
+      MaxSize: 4
+      DesiredCapacity: 2
+      VPCZoneIdentifier: [!Ref PrivateSubnet1, !Ref PrivateSubnet2]  # Use private subnets for web servers
+      Tags:
+        - Key: Name
+          Value: "WebServer"
+          PropagateAtLaunch: true
+
+# WEB-SERVER SG
+  WebServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "WebServerSecurityGroup"
+      Description: "Security Group for Web Servers"
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref ALBSecurityGroup  # Allow traffic from ALB Security Group on port 80
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !Ref ALBSecurityGroup  # Allow traffic from ALB Security Group on port 443
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref AnsibleSecurityGroup  # Allow traffic from Ansible Security Group on port 22
+      Tags:
+        - Key: Name
+          Value: "WebServerSecurityGroup"
+
+
+
+
+
+
+

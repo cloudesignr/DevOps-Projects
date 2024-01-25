@@ -1,0 +1,402 @@
+# Part 1
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Static Website Deployment with Ansible"
+
+Parameters:
+  KeyPairName:
+    Type: String
+    Description: "Name of the Key Pair for EC2 instances"
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: "10.0.0.0/16"
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: "MyVPC"
+
+  # Define Subnets, Internet Gateway, Route Tables, NAT Gateways, etc.
+
+  SecurityGroups:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "ALBSecurityGroup"
+      Description: "Security Group for Application Load Balancer"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: -1
+          CidrIp: "0.0.0.0/0"
+      Tags:
+        - Key: Name
+          Value: "ALBSecurityGroup"
+
+    # Define other security groups for Bastion, Ansible Server, and Web Servers
+
+  # Define instances (Bastion, Ansible Server, Web Servers)
+
+  # Define Application Load Balancer (ALB)
+
+  # Define Route 53 Resources for Domain and Record Set
+
+  # Define ACM Certificate for SSL
+
+  # Define HTTPS Listener for ALB
+
+Outputs:
+  WebsiteURL:
+    Description: "URL of the deployed website"
+    Value: !GetAtt [ALB, DNSName]
+
+# Part 2
+Resources:
+  # (Previous resources)
+
+  BastionHost:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      KeyName: !Ref KeyPairName
+      ImageId: "ami-xxxxxxxxxxxxxxxxx"  # Specify the appropriate AMI ID
+      SubnetId: !Ref PublicSubnet   # Ensure this is a public subnet
+      SecurityGroupIds:
+        - !Ref BastionSecurityGroup
+      Tags:
+        - Key: Name
+          Value: "BastionHost"
+
+  AnsibleServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      KeyName: !Ref KeyPairName
+      ImageId: "ami-xxxxxxxxxxxxxxxxx"  # Specify the appropriate AMI ID
+      SubnetId: !Ref PrivateSubnet   # Ensure this is a private subnet
+      SecurityGroupIds:
+        - !Ref AnsibleSecurityGroup
+      Tags:
+        - Key: Name
+          Value: "AnsibleServer"
+  
+  WebServers:
+    Type: AWS::EC2::AutoScalingGroup
+    Properties:
+      LaunchConfigurationName: !Ref WebServerLaunchConfig
+      MinSize: 2
+      MaxSize: 4
+      DesiredCapacity: 2
+      VPCZoneIdentifier: [!Ref PrivateSubnet]  # Use private subnets for web servers
+      Tags:
+        - Key: Name
+          Value: "WebServer"
+          PropagateAtLaunch: true
+
+  WebServerLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: "ami-xxxxxxxxxxxxxxxxx"  # Specify the appropriate AMI ID
+      InstanceType: t2.micro
+      KeyName: !Ref KeyPairName
+      SecurityGroups:
+        - !Ref WebServerSecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          # Add any user data scripts or configurations here
+
+  # Define other resources like Application Load Balancer, Route 53, ACM Certificate, etc.
+
+Outputs:
+  WebsiteURL:
+    Description: "URL of the deployed website"
+    Value: !GetAtt [ALB, DNSName]
+
+# part 3
+Resources:
+  # (Previous resources)
+
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: "MyALB"
+      Subnets: [!Ref PublicSubnet1, !Ref PublicSubnet2]  # Public subnets for ALB
+      SecurityGroups: [!Ref ALBSecurityGroup]
+      Scheme: internet-facing
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: "60"
+      Tags:
+        - Key: Name
+          Value: "MyALB"
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            ContentType: "text/plain"
+            StatusCode: "200"
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
+
+  ACMCertificate:
+    Type: "AWS::CertificateManager::Certificate"
+    Properties:
+      DomainName: "yourdomain.com"  # Replace with your actual domain
+      ValidationMethod: DNS
+      Tags:
+        - Key: Name
+          Value: "ACMCertificate"
+
+  Route53HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: "yourdomain.com"  # Replace with your actual domain
+      HostedZoneConfig:
+        Comment: "Route 53 Hosted Zone for yourdomain.com"
+
+  Route53RecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref Route53HostedZone
+      Name: "yourdomain.com"  # Replace with your actual domain
+      Type: A
+      TTL: "60"
+      AliasTarget:
+        DNSName: !GetAtt [ALB, DNSName]
+        HostedZoneId: !GetAtt [ALB, CanonicalHostedZoneID]
+
+  HTTPSListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            ContentType: "text/plain"
+            StatusCode: "200"
+      LoadBalancerArn: !Ref ALB
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref ACMCertificate
+
+# part 4
+Resources:
+  # (Previous resources)
+
+  AnsibleServerAMI:
+    Type: AWS::EC2::Image
+    Properties:
+      Name: "AnsibleServerAMI"
+      InstanceId: !Ref AnsibleServer
+      NoReboot: true
+
+  CleanupResourcesLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt CleanupResourcesLambdaRole.Arn
+      FunctionName: "CleanupResourcesLambda"
+      Code:
+        S3Bucket: "your-s3-bucket"  # Replace with your S3 bucket
+        S3Key: "cleanup-resources.zip"  # Replace with your Lambda deployment package
+      Runtime: python3.8
+      Timeout: 300
+
+  CleanupResourcesLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: "CleanupResourcesPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:TerminateInstances
+                  - ec2:DeleteKeyPair
+                  - ec2:ReleaseAddress
+                  - ec2:DeleteSecurityGroup
+                  - ec2:DeleteSubnet
+                  - ec2:DeleteRouteTable
+                  - ec2:DeleteVpc
+                  - route53:DeleteHostedZone
+                Resource: "*"
+
+  CleanupResourcesLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref CleanupResourcesLambda
+      Principal: apigateway.amazonaws.com
+
+  CleanupResourcesApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: "CleanupResourcesApi"
+      FailOnWarnings: "true"
+
+  CleanupResourcesApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref CleanupResourcesApi
+      ParentId: !GetAtt CleanupResourcesApi.RootResourceId
+      PathPart: "cleanup"
+
+  CleanupResourcesApiMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: POST
+      ResourceId: !Ref CleanupResourcesApiResource
+      RestApiId: !Ref CleanupResourcesApi
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CleanupResourcesLambda.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+      OperationName: "CleanupResources"
+
+# part 5
+
+Resources:
+  # (Previous resources)
+
+  AnsibleServerAMI:
+    Type: AWS::EC2::Image
+    Properties:
+      Name: "AnsibleServerAMI"
+      InstanceId: !Ref AnsibleServer
+      NoReboot: true
+
+  CleanupResourcesLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt CleanupResourcesLambdaRole.Arn
+      FunctionName: "CleanupResourcesLambda"
+      Code:
+        S3Bucket: "your-s3-bucket"  # Replace with your S3 bucket
+        S3Key: "cleanup-resources.zip"  # Replace with your Lambda deployment package
+      Runtime: python3.8
+      Timeout: 300
+
+  CleanupResourcesLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: "CleanupResourcesPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:TerminateInstances
+                  - ec2:DeleteKeyPair
+                  - ec2:ReleaseAddress
+                  - ec2:DeleteSecurityGroup
+                  - ec2:DeleteSubnet
+                  - ec2:DeleteRouteTable
+                  - ec2:DeleteVpc
+                  - route53:DeleteHostedZone
+                Resource: "*"
+
+  CleanupResourcesLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref CleanupResourcesLambda
+      Principal: apigateway.amazonaws.com
+
+  CleanupResourcesApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: "CleanupResourcesApi"
+      FailOnWarnings: "true"
+
+  CleanupResourcesApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref CleanupResourcesApi
+      ParentId: !GetAtt CleanupResourcesApi.RootResourceId
+      PathPart: "cleanup"
+
+  CleanupResourcesApiMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: POST
+      ResourceId: !Ref CleanupResourcesApiResource
+      RestApiId: !Ref CleanupResourcesApi
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CleanupResourcesLambda.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+      OperationName: "CleanupResources"
+
+# part 6
+import boto3
+import json
+
+ec2 = boto3.client('ec2')
+route53 = boto3.client('route53')
+
+def lambda_handler(event, context):
+    # Extract information from the event
+    body = json.loads(event['body'])
+    vpc_id = body.get('vpcId')
+    hosted_zone_id = body.get('hostedZoneId')
+
+    # Terminate instances, release resources, delete VPC, and delete Route 53 hosted zone
+    try:
+        ec2.terminate_instances(InstanceIds=get_instance_ids(vpc_id))
+        ec2.delete_key_pair(KeyName='your-key-pair-name')  # Replace with your key pair name
+        ec2.delete_security_group(GroupId='your-security-group-id')  # Replace with your security group id
+        ec2.delete_subnet(SubnetId='your-subnet-id')  # Replace with your subnet id
+        ec2.delete_route_table(RouteTableId='your-route-table-id')  # Replace with your route table id
+        ec2.delete_vpc(VpcId=vpc_id)
+
+        route53.delete_hosted_zone(Id=hosted_zone_id)
+        
+        return {
+            'statusCode': 200,
+            'body': json.dumps('Resources successfully cleaned up!')
+        }
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'body': json.dumps(f'Error: {str(e)}')
+        }
+
+def get_instance_ids(vpc_id):
+    response = ec2.describe_instances(
+        Filters=[
+            {'Name': 'vpc-id', 'Values': [vpc_id]}
+        ]
+    )
+    instance_ids = []
+    for reservation in response['Reservations']:
+        for instance in reservation['Instances']:
+            instance_ids.append(instance['InstanceId'])
+    return instance_ids

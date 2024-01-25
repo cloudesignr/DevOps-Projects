@@ -1,0 +1,289 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Three-tier AWS network VPC'
+
+Resources:
+  MyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: '10.0.0.0/16'
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+
+  MyInternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref MyVPC
+      InternetGatewayId: !Ref MyInternetGateway
+
+  PublicSubnetAZ1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: '10.0.1.0/24'
+      AvailabilityZone: 'us-east-1a'
+
+  PublicSubnetAZ2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: '10.0.2.0/24'
+      AvailabilityZone: 'us-east-1b'
+
+  PrivateAppSubnetAZ1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: '10.0.3.0/24'
+      AvailabilityZone: 'us-east-1a'
+
+  PrivateAppSubnetAZ2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: '10.0.4.0/24'
+      AvailabilityZone: 'us-east-1b'
+
+  PrivateDataSubnetAZ1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: '10.0.5.0/24'
+      AvailabilityZone: 'us-east-1a'
+
+  PrivateDataSubnetAZ2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: '10.0.6.0/24'
+      AvailabilityZone: 'us-east-1b'
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVPC
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref MyInternetGateway
+
+  PublicSubnetAZ1Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetAZ1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnetAZ2Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetAZ2
+      RouteTableId: !Ref PublicRouteTable
+
+Outputs:
+  VPCId:
+    Value: !Ref MyVPC
+    Description: 'ID of the created VPC'
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Three-tier AWS network VPC with NAT Gateways'
+
+Resources:
+  # (Existing resources are not repeated for brevity)
+
+  NatGatewayAZ1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: 'your-allocation-id-az1'  # Replace with your Elastic IP Allocation ID
+      SubnetId: !Ref PublicSubnetAZ1
+
+  PrivateRouteTableAZ1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVPC
+
+  PrivateRouteAZ1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableAZ1
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NatGatewayAZ1
+
+  PrivateSubnetAZ1Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateAppSubnetAZ1
+      RouteTableId: !Ref PrivateRouteTableAZ1
+
+  # Repeat similar resources for the second Availability Zone (AZ2)
+  NatGatewayAZ2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: 'your-allocation-id-az2'  # Replace with your Elastic IP Allocation ID
+      SubnetId: !Ref PublicSubnetAZ2
+
+  PrivateRouteTableAZ2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVPC
+
+  PrivateRouteAZ2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableAZ2
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NatGatewayAZ2
+
+  PrivateSubnetAZ2Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateAppSubnetAZ2
+      RouteTableId: !Ref PrivateRouteTableAZ2
+
+Outputs:
+  VPCId:
+    Value: !Ref MyVPC
+    Description: 'ID of the created VPC'
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Three-tier AWS network VPC with NAT Gateways and Security Groups'
+
+Resources:
+  # (Existing resources are not repeated for brevity)
+
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'ALB Security Group'
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: '0.0.0.0/0'
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: '0.0.0.0/0'
+
+  BastionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'Bastion Security Group'
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 'your-ip-address/32'  # Replace with your actual IP address
+
+  AnsibleServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'Ansible Server Security Group'
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref BastionSecurityGroup
+
+  WebserverSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'Webserver Security Group'
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref AnsibleServerSecurityGroup
+
+Outputs:
+  VPCId:
+    Value: !Ref MyVPC
+    Description: 'ID of the created VPC'
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Three-tier AWS network VPC with NAT Gateways, Security Groups, and EC2 Instances'
+
+Resources:
+  # (Existing resources are not repeated for brevity)
+
+  BastionHost:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: 'your-ami-id'  # Replace with your preferred AMI ID
+      InstanceType: 't2.micro'
+      KeyName: 'your-key-pair'  # Replace with your key pair name
+      SubnetId: !Ref PublicSubnetAZ1
+      SecurityGroupIds:
+        - !Ref BastionSecurityGroup
+
+  AnsibleServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: 'your-ami-id'  # Replace with your preferred AMI ID
+      InstanceType: 't2.micro'
+      KeyName: 'your-key-pair'  # Replace with your key pair name
+      SubnetId: !Ref PrivateAppSubnetAZ1
+      SecurityGroupIds:
+        - !Ref AnsibleServerSecurityGroup
+
+  WebServerAZ1:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: 'your-ami-id'  # Replace with your preferred AMI ID
+      InstanceType: 't2.micro'
+      KeyName: 'your-key-pair'  # Replace with your key pair name
+      SubnetId: !Ref PrivateAppSubnetAZ1
+      SecurityGroupIds:
+        - !Ref WebserverSecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          echo "Hello from WebServer AZ1" > /var/www/html/index.html
+
+  WebServerAZ2:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: 'your-ami-id'  # Replace with your preferred AMI ID
+      InstanceType: 't2.micro'
+      KeyName: 'your-key-pair'  # Replace with your key pair name
+      SubnetId: !Ref PrivateAppSubnetAZ2
+      SecurityGroupIds:
+        - !Ref WebserverSecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          echo "Hello from WebServer AZ2" > /var/www/html/index.html
+
+Outputs:
+  BastionHostInstanceId:
+    Value: !Ref BastionHost
+    Description: 'ID of the Bastion Host instance'
+
+  AnsibleServerInstanceId:
+    Value: !Ref AnsibleServer
+    Description: 'ID of the Ansible Server instance'
+
+  WebServerAZ1InstanceId:
+    Value: !Ref WebServerAZ1
+    Description: 'ID of the WebServer AZ1 instance'
+
+  WebServerAZ2InstanceId:
+    Value: !Ref WebServerAZ2
+    Description: 'ID of the WebServer AZ2 instance'
